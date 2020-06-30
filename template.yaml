@@ -1,0 +1,621 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: >
+  MCQ-SAM
+
+  Sample SAM Template for MCQ-SAM
+  
+# More info about Globals: https://github.com/awslabs/serverless-application-model/blob/master/docs/globals.rst
+Globals:
+  Function:
+    Timeout: 12
+
+Resources:
+  #
+  #
+  #
+  #Lambda functions.
+  #(01) Create new mcq exam paper
+  CreateNewMCQPaper:
+    Type: AWS::Serverless::Function 
+    Properties:
+      CodeUri: create-mcq-paper/
+      Handler: app.createMCQPaper
+      Runtime: nodejs12.x
+      Role: !GetAtt MCQBasicReadWriteLambdaRole.Arn
+      Environment:
+        Variables:
+          BASE_TABLE_NAME: !Ref MCQBaseTable
+      Events:
+        MCQAPI:
+          Type: Api 
+          Properties:
+            RestApiId: !Ref MCQApiGatewayApi
+            Path: /mcq-paper
+            Method: post
+
+  #(02) Change the exisiting mcq exam paper.
+  ChangeMCQPaper:
+    Type: AWS::Serverless::Function 
+    Properties:
+      CodeUri: change-mcq-paper/
+      Handler: app.changeMCQPaper
+      Runtime: nodejs12.x
+      Role: !GetAtt MCQBasicReadWriteLambdaRole.Arn
+      Environment:
+        Variables:
+          BASE_TABLE_NAME: !Ref MCQBaseTable
+      Events:
+        MCQAPI:
+          Type: Api 
+          Properties:
+            RestApiId: !Ref MCQApiGatewayApi
+            Path: /mcq-paper
+            Method: patch
+
+  #(03) get mcq exam paper.
+  GetMCQPaper:
+    Type: AWS::Serverless::Function 
+    Properties:
+      CodeUri: get-mcq-paper/
+      Handler: app.getMCQPaper
+      Runtime: nodejs12.x
+      Role: !GetAtt MCQBasicReadWriteLambdaRole.Arn
+      Environment:
+        Variables:
+          BASE_TABLE_NAME: !Ref MCQBaseTable
+      Events:
+        MCQAPI:
+          Type: Api 
+          Properties:
+            RestApiId: !Ref MCQApiGatewayApi
+            Path: /mcq-paper
+            Method: get
+
+  #(04) get mcq exam paper list.
+  GetMCQPaperList:
+    Type: AWS::Serverless::Function 
+    Properties:
+      CodeUri: get-mcq-paper-list/
+      Handler: app.getMCQPaperList
+      Role: !GetAtt MCQBasicReadWriteLambdaRole.Arn
+      Runtime: nodejs12.x
+      Environment:
+        Variables:
+          BASE_TABLE_NAME: !Ref MCQBaseTable
+      Events:
+        MCQAPI:
+          Type: Api 
+          Properties:
+            RestApiId: !Ref MCQApiGatewayApi
+            Path: /mcq-papers
+            Method: get
+
+  #(05) Post paper result.
+  PostMCQPaperResult:
+    Type: AWS::Serverless::Function 
+    Properties:
+      CodeUri: post-mcq-paper-result/
+      Handler: app.postMCQPaperResult
+      Runtime: nodejs12.x
+      Role: !GetAtt MCQBasicReadWriteLambdaRole.Arn
+      Environment:
+        Variables:
+          BASE_TABLE_NAME: !Ref MCQBaseTable
+      Events:
+        MCQAPI:
+          Type: Api 
+          Properties:
+            RestApiId: !Ref MCQApiGatewayApi
+            Path: /mcq-paper/result
+            Method: post
+      
+  #(06) get mcq leaderboard.
+  GetMCQPaperLeaderboard:
+    Type: AWS::Serverless::Function 
+    Properties:
+      CodeUri: get-mcq-paper-leaderboard/
+      Handler: app.getMCQPaperLeaderboard
+      Runtime: nodejs12.x
+      Role: !GetAtt MCQBasicReadWriteLambdaRole.Arn
+      Environment:
+        Variables:
+          BASE_TABLE_NAME: !Ref MCQBaseTable
+      Events:
+        MCQAPI:
+          Type: Api 
+          Properties:
+            RestApiId: !Ref MCQApiGatewayApi
+            Path: /mcq-paper/leaderboard
+            Method: get
+  
+  #(07) Post a score to the MCQ leaderboard.
+  PostScoreToMCQPaperLeaderboard:
+    Type: AWS::Serverless::Function 
+    Properties:
+      CodeUri: post-score-to-mcq-paper-leaderboard
+      Handler: app.postScoreToMCQPaperLeaderboard
+      Runtime: nodejs12.x
+      Role: !GetAtt MCQBasicReadWriteLambdaRole.Arn
+      Environment:
+        Variables:
+          BASE_TABLE_NAME: !Ref MCQBaseTable
+      Events:
+        MCQAPI:
+          Type: Api 
+          Properties:
+            RestApiId: !Ref MCQApiGatewayApi
+            Path: /mcq-paper/leaderboard
+            Method: post
+
+  #(08) Add a teacher to the database.
+  AddTeacherToDatabase:
+    Type: AWS::Serverless::Function 
+    Properties:
+      CodeUri: add-teacher-to-database/
+      Handler: app.addTeacherToDatabase
+      Runtime: nodejs12.x
+      Role: !GetAtt MCQBasicReadWriteLambdaRole.Arn
+      Environment:
+        Variables:
+          BASE_TABLE_NAME: !Ref MCQBaseTable
+      Events:
+        MCQAPI:
+          Type: Api 
+          Properties:
+            RestApiId: !Ref MCQApiGatewayApi
+            Path: /teacher
+            Method: post
+  
+  #(09) create student entry when first paper is done.
+  AddStudentToDatabase:
+    Type: AWS::Serverless::Function 
+    Properties:
+      CodeUri: add-student-to-database/
+      Handler: app.addStudentToDatabase
+      Runtime: nodejs12.x
+      Role: !GetAtt MCQBasicReadWriteLambdaRole.Arn
+      Environment:
+        Variables:
+          BASE_TABLE_NAME: !Ref MCQBaseTable
+      Events:
+        MCQAPI:
+          Type: Api 
+          Properties:
+            RestApiId: !Ref MCQApiGatewayApi
+            Path: /student
+            Method: post
+        CognitoTrigger:
+          Type: Cognito
+          Properties:
+            UserPool:
+              Ref: MCQCognitoUserPool
+            Trigger: PostConfirmation
+    
+  #(10) Add a new bookmarks.
+  PostNewBookmark:
+    Type: AWS::Serverless::Function 
+    Properties:
+      CodeUri: post-new-bookmark/
+      Handler: app.postNewBookmark
+      Runtime: nodejs12.x
+      Role: !GetAtt MCQBasicReadWriteLambdaRole.Arn
+      Environment:
+        Variables:
+          BASE_TABLE_NAME: !Ref MCQBaseTable
+      Events:
+        MCQAPI:
+          Type: Api 
+          Properties:
+            RestApiId: !Ref MCQApiGatewayApi
+            Path: /bookmark
+            Method: post
+
+  #(11) Create a new paper collection.
+  PostNewPaperCollection:
+    Type: AWS::Serverless::Function 
+    Properties:
+      CodeUri: post-new-paper-collection/
+      Handler: app.postNewPaperCollection
+      Runtime: nodejs12.x
+      Role: !GetAtt MCQBasicReadWriteLambdaRole.Arn
+      Environment:
+        Variables:
+          BASE_TABLE_NAME: !Ref MCQBaseTable
+      Events:
+        MCQAPI:
+          Type: Api 
+          Properties:
+            RestApiId: !Ref MCQApiGatewayApi
+            Path: /collection
+            Method: post
+
+  #(12) edit paper collection.
+  PacthPaperCollection:
+    Type: AWS::Serverless::Function 
+    Properties:
+      CodeUri: patch-paper-collection/
+      Handler: app.patchPaperCollection
+      Runtime: nodejs12.x
+      Role: !GetAtt MCQBasicReadWriteLambdaRole.Arn
+      Environment:
+        Variables:
+          BASE_TABLE_NAME: !Ref MCQBaseTable
+      Events:
+        MCQAPI:
+          Type: Api 
+          Properties:
+            RestApiId: !Ref MCQApiGatewayApi
+            Path: /collection
+            Method: patch
+
+  #(13) Delete paper collection.
+  DeletePaperCollection:
+    Type: AWS::Serverless::Function 
+    Properties:
+      CodeUri: delete-paper-collection/
+      Handler: app.deletePaperCollection
+      Runtime: nodejs12.x
+      Role: !GetAtt MCQBasicReadWriteLambdaRole.Arn
+      Environment:
+        Variables:
+          BASE_TABLE_NAME: !Ref MCQBaseTable
+      Events:
+        MCQAPI:
+          Type: Api 
+          Properties:
+            RestApiId: !Ref MCQApiGatewayApi
+            Path: /collection
+            Method: delete
+
+  #(14) Test stuff out.
+  TestLambdaFunction:
+    Type: AWS::Serverless::Function 
+    Properties:
+      CodeUri: test-lambda-function/
+      Handler: app.testLambdaFunction
+      Runtime: nodejs12.x
+      Role: !GetAtt MCQBasicReadWriteLambdaRole.Arn
+      Environment:
+        Variables:
+          BASE_TABLE_NAME: !Ref MCQBaseTable
+      Events:
+        MCQAPI:
+          Type: Api 
+          Properties:
+            RestApiId: !Ref MCQApiGatewayApi
+            Path: /test
+            Method: post
+
+    
+  #
+  #
+  #
+  #
+  #(01) S3 Bucket Policy for s3 bucket: MCQImageBucket.
+  MCQImageBucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket:
+        Ref: "MCQImageBucket"
+      PolicyDocument:
+        Statement:
+          - Action:
+              - "s3:*"
+            Effect: "Allow"
+            Resource:
+              Fn::Join:
+                - ""
+                - - "arn:aws:s3:::"
+                  - Ref: "MCQImageBucket"
+                  - ""
+            Principal: 
+              AWS: !GetAtt MCQImageUser.Arn
+            Condition:
+              StringLike:
+                s3:prefix: "${cognito-identity.amazonaws.com}/*"
+          #
+          - Action:
+              - "s3:*"
+            Effect: "Allow"
+            Resource:
+              Fn::Join:
+                - ""
+                - - "arn:aws:s3:::"
+                  - Ref: "MCQImageBucket"
+                  - "/${cognito-identity.amazonaws.com}/*"
+            Principal: 
+              AWS: !GetAtt MCQImageUser.Arn
+  
+  #(02) IAM Policy for User: MCQImageUser.
+  MCQImageUserPolicy:
+    Type: AWS::IAM::Policy
+    Properties:
+      Users: 
+        - !Ref MCQImageUser
+      PolicyName: "MCQImageUserPolicy"
+      PolicyDocument:
+        Statement:
+          - Effect: "Allow"
+            Resource: "*"
+            Action:
+              - "s3:PutAnalyticsConfiguration"
+              - "s3:GetObjectVersionTagging"
+              - "s3:DeleteAccessPoint"
+              - "s3:CreateBucket"
+              - "s3:ReplicateObject"
+              - "s3:GetObjectAcl"
+              - "s3:GetBucketObjectLockConfiguration"
+              - "s3:DeleteBucketWebsite"
+              - "s3:PutLifecycleConfiguration"
+              - "s3:GetObjectVersionAcl"
+              - "s3:HeadBucket"
+              - "s3:DeleteObject"
+              - "s3:GetBucketPolicyStatus"
+              - "s3:GetObjectRetention"
+              - "s3:GetBucketWebsite"
+              - "s3:ListJobs"
+              - "s3:PutReplicationConfiguration"
+              - "s3:PutObjectLegalHold"
+              - "s3:GetObjectLegalHold"
+              - "s3:GetBucketNotification"
+              - "s3:PutBucketCORS"
+              - "s3:GetReplicationConfiguration"
+              - "s3:ListMultipartUploadParts"
+              - "s3:PutObject"
+              - "s3:GetObject"
+              - "s3:PutBucketNotification"
+              - "s3:DescribeJob"
+              - "s3:PutBucketLogging"
+              - "s3:GetAnalyticsConfiguration"
+              - "s3:PutBucketObjectLockConfiguration"
+              - "s3:GetObjectVersionForReplication"
+              - "s3:CreateJob"
+              - "s3:CreateAccessPoint"
+              - "s3:GetLifecycleConfiguration"
+              - "s3:GetAccessPoint"
+              - "s3:GetInventoryConfiguration"
+              - "s3:GetBucketTagging"
+              - "s3:PutAccelerateConfiguration"
+              - "s3:DeleteObjectVersion"
+              - "s3:GetBucketLogging"
+              - "s3:ListBucketVersions"
+              - "s3:RestoreObject"
+              - "s3:ListBucket"
+              - "s3:GetAccelerateConfiguration"
+              - "s3:GetBucketPolicy"
+              - "s3:PutEncryptionConfiguration"
+              - "s3:GetEncryptionConfiguration"
+              - "s3:GetObjectVersionTorrent"
+              - "s3:AbortMultipartUpload"
+              - "s3:GetBucketRequestPayment"
+              - "s3:GetAccessPointPolicyStatus"
+              - "s3:UpdateJobPriority"
+              - "s3:GetObjectTagging"
+              - "s3:GetMetricsConfiguration"
+              - "s3:DeleteBucket"
+              - "s3:PutBucketVersioning"
+              - "s3:PutObjectAcl"
+              - "s3:GetBucketPublicAccessBlock"
+              - "s3:ListBucketMultipartUploads"
+              - "s3:ListAccessPoints"
+              - "s3:PutMetricsConfiguration"
+              - "s3:UpdateJobStatus"
+              - "s3:GetBucketVersioning"
+              - "s3:GetBucketAcl"
+              - "s3:PutInventoryConfiguration"
+              - "s3:GetObjectTorrent"
+              - "s3:GetAccountPublicAccessBlock"
+              - "s3:PutBucketWebsite"
+              - "s3:ListAllMyBuckets"
+              - "s3:PutBucketRequestPayment"
+              - "s3:PutObjectRetention"
+              - "s3:GetBucketCORS"
+              - "s3:GetBucketLocation"
+              - "s3:GetAccessPointPolicy"
+              - "s3:ReplicateDelete"
+              - "s3:GetObjectVersion"
+  
+  #(03) IAM Policy for CloudWatch.
+  MCQCloudWatchLogsPolicy:
+    Type: AWS::IAM::Policy
+    Properties:
+      Roles: 
+        - !Ref MCQBasicReadWriteLambdaRole
+      PolicyName: "MCQImageUserPolicy"
+      PolicyDocument:
+        Statement:
+          - Effect: "Allow"
+            Resource: "*"
+            Action:
+              - "logs:*"
+              
+
+  #
+  #
+  #
+  #IAM:Role      
+  #(01) grant read and write MCQBaseTable dynamodb table for lambda.
+  MCQBasicReadWriteLambdaRole:
+    Type: "AWS::IAM::Role"
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: "Allow"
+            Principal:
+              Service:
+                - "lambda.amazonaws.com"
+            Action:
+              - "sts:AssumeRole"
+      Path: "/"
+      Policies:
+        - PolicyName: "GoNowBasicReadWriteDynamodbPolicy"
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: "Allow"
+                Action:
+                  - "dynamodb:BatchGetItem"
+                  - "dynamodb:BatchWriteItem"
+                  - "dynamodb:ConditionCheckItem"
+                  - "dynamodb:DeleteItem"
+                  - "dynamodb:DescribeTimeToLive"
+                  - "dynamodb:GetItem"
+                  - "dynamodb:GetRecords"
+                  - "dynamodb:GetShardIterator"
+                  - "dynamodb:PutItem"
+                  - "dynamodb:Query"
+                  - "dynamodb:Scan"
+                  - "dynamodb:UpdateItem"
+                Resource: 
+                  
+                  - !GetAtt MCQBaseTable.Arn
+                  - !Join [ '', [ !GetAtt MCQBaseTable.Arn, '/*'] ]
+                  - !Join [ '', [ !GetAtt MCQBaseTable.Arn, '/index/'] ]
+                  - !Join [ '', [ !GetAtt MCQBaseTable.Arn, '/index/*'] ]
+
+  
+  #
+  #
+  #
+  #IAM User
+  MCQImageUser:
+    Type: AWS::IAM::User
+    Properties:
+      LoginProfile:
+        Password: "gune1997#"
+
+
+  #
+  #
+  #
+  #Cognito
+  #Client for Cognito user pool
+  #Cognito user pool configuaration
+  MCQCognitoUserPool:
+    Type: AWS::Cognito::UserPool
+    Properties: 
+      UsernameAttributes: 
+       - email
+      #AccountRecoverySetting:
+        #RecoveryMechanisms: 
+        #- Name: "verified_email"
+          #Priority: 1
+      EmailConfiguration:
+        EmailSendingAccount: COGNITO_DEFAULT
+      VerificationMessageTemplate:
+        DefaultEmailOption: CONFIRM_WITH_LINK
+      #EmailVerificationSubject: 'Verification for the MCQ app'
+      #EmailVerificationMessage: 'Please click the link below to verify your email address. {##Verify Email##}' # fails because {####} is required
+      #AliasAttributes:
+        #- phone_number
+        #- preferred_username
+      UserPoolName: "MCQCognitoUserPool"
+      Policies:
+        PasswordPolicy:
+          MinimumLength: 8
+      Schema:
+        - AttributeDataType: String
+          Name: first_name
+          Required: false
+          Mutable: true
+
+        - AttributeDataType: String
+          Name: second_name
+          Required: false
+          Mutable: true
+
+        - AttributeDataType: String
+          Name: al_stream
+          Required: false
+          Mutable: true
+
+        - AttributeDataType: String
+          Name: birthday
+          Required: false
+          Mutable: true
+
+        #- AttributeDataType: String
+        #  Name: gender
+        #  Required: false
+        #  Mutable: true
+#
+        #- AttributeDataType: String
+        #  Name: updated_at
+        #  Required: false
+        #  Mutable: true
+#
+        #- AttributeDataType: String
+        #  Name: user_suspended
+        #  Required: false
+        #  Mutable: true
+          
+
+  #Client for Cognito user pool
+  MCQCognitoUserPoolClient:
+    Type: AWS::Cognito::UserPoolClient
+    Properties:
+      UserPoolId: !Ref MCQCognitoUserPool
+      ClientName: MCQCognitoUserPoolClient
+      GenerateSecret: false
+
+  #Identity Pool
+  MCQIdentityPool:
+    Type: AWS::Cognito::IdentityPool
+    Properties:
+      AllowUnauthenticatedIdentities: true
+      CognitoIdentityProviders:
+        - ClientId:
+            Ref: MCQCognitoUserPoolClient
+          ProviderName:
+            Fn::GetAtt: ["MCQCognitoUserPool", "ProviderName"]
+
+
+  #
+  #
+  #
+  #API Gateway
+  MCQApiGatewayApi:
+    Type: AWS::Serverless::Api
+    Properties:
+      StageName: DEV
+      Cors: "'*'"
+      Name: "MCQApi"
+      Auth:
+        DefaultAuthorizer: MyCognitoAuthorizer
+        Authorizers:
+          MyCognitoAuthorizer:
+            UserPoolArn:
+              Fn::GetAtt: [MCQCognitoUserPool, Arn]          
+  #
+  #
+  #
+  #S3
+  MCQImageBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      #AccessControl: PublicRead
+      BucketName: mcq-image-bucket
+
+  #
+  #
+  #
+  #DynamoDB
+  MCQBaseTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      AttributeDefinitions:
+        - AttributeName: "PK"
+          AttributeType: "S"
+        - AttributeName: "SK"
+          AttributeType: "S"
+      KeySchema:
+        - AttributeName: "PK"
+          KeyType: "HASH"
+        - AttributeName: "SK"
+          KeyType: "RANGE"
+      ProvisionedThroughput:
+        ReadCapacityUnits: "5"
+        WriteCapacityUnits: "5"
+      TableName: "MCQBaseTable"
