@@ -2,13 +2,16 @@ AWSTemplateFormatVersion: '2010-09-09'
 Transform: AWS::Serverless-2016-10-31
 Description: >
   MCQ-SAM
-
   Sample SAM Template for MCQ-SAM
   
 # More info about Globals: https://github.com/awslabs/serverless-application-model/blob/master/docs/globals.rst
 Globals:
   Function:
     Timeout: 12
+
+Parameters:
+  BranchPrefix:
+    Type: "String"
 
 Resources:
   #
@@ -430,6 +433,21 @@ Resources:
             Action:
               - "logs:*"
               
+  #(04) Authenticated IAM Policy for MCQIdentityPool.
+  MCQIdentityPoolAuthPolicy:
+    Type: AWS::IAM::Policy
+    Properties:
+      Roles: 
+        - !Ref MCQIdentityPoolAuthRole
+      PolicyName: "MCQIdentityPoolAuthPolicy"
+      PolicyDocument:
+        Statement:
+          - Effect: "Allow"
+            Resource: "*"
+            Action:
+              - "mobileanalytics:PutEvents"
+              - "cognito-sync:*"
+              - "cognito-identity:*"
 
   #
   #
@@ -475,7 +493,23 @@ Resources:
                   - !Join [ '', [ !GetAtt MCQBaseTable.Arn, '/index/'] ]
                   - !Join [ '', [ !GetAtt MCQBaseTable.Arn, '/index/*'] ]
 
+  #(02)Authenticated Role for MCQIdentityPool.
+  MCQIdentityPoolAuthRole:
+    Type: "AWS::IAM::Role"
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+        - Effect: Allow
+          Principal:
+            Federated: cognito-identity.amazonaws.com
+          Action: sts:AssumeRoleWithWebIdentity
+          Condition:
+            ForAnyValue:StringLike:
+              cognito-identity.amazonaws.com:amr: authenticated
+      Path: "/"
   
+
   #
   #
   #
@@ -511,7 +545,7 @@ Resources:
       #AliasAttributes:
         #- phone_number
         #- preferred_username
-      UserPoolName: "MCQCognitoUserPool"
+      UserPoolName: !Sub "${BranchPrefix}-MCQCognitoUserPool"
       Policies:
         PasswordPolicy:
           MinimumLength: 8
@@ -560,16 +594,30 @@ Resources:
       ClientName: MCQCognitoUserPoolClient
       GenerateSecret: false
 
+  MCQCognitoUserPoolDomain:
+    Type: AWS::Cognito::UserPoolDomain
+    Properties:
+      Domain: "gn-elasticsearch"
+      UserPoolId: !Ref MCQCognitoUserPool
+
   #Identity Pool
   MCQIdentityPool:
     Type: AWS::Cognito::IdentityPool
     Properties:
-      AllowUnauthenticatedIdentities: true
+      AllowUnauthenticatedIdentities: false
       CognitoIdentityProviders:
         - ClientId:
             Ref: MCQCognitoUserPoolClient
           ProviderName:
             Fn::GetAtt: ["MCQCognitoUserPool", "ProviderName"]
+  
+  #Identity Pool roles
+  MCQIdentityPoolRoles:
+    Type: AWS::Cognito::IdentityPoolRoleAttachment
+    Properties: 
+      IdentityPoolId: !Ref MCQIdentityPool
+      Roles: 
+        "authenticated": !GetAtt MCQIdentityPoolAuthRole.Arn 
 
 
   #
@@ -596,7 +644,7 @@ Resources:
     Type: AWS::S3::Bucket
     Properties:
       #AccessControl: PublicRead
-      BucketName: mcq-image-bucket
+      BucketName: !Sub "${BranchPrefix}-mcq-image-bucket"
 
   #
   #
@@ -618,4 +666,4 @@ Resources:
       ProvisionedThroughput:
         ReadCapacityUnits: "5"
         WriteCapacityUnits: "5"
-      TableName: "MCQBaseTable"
+      TableName: !Sub "${BranchPrefix}-MCQBaseTable"

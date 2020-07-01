@@ -15,6 +15,7 @@ let response;
  * 
  */
 exports.getMCQPaperLeaderboard = async (event, context) => {
+    //add record to the leaderboard table by paper.
     try {
         // const ret = await axios(url);
         response = {
