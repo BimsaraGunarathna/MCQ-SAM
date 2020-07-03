@@ -12,9 +12,10 @@ Globals:
 Parameters:
   BranchPrefix:
     Type: "String"
+    Default : "init"
 
 Resources:
-  #
+  #P
   #
   #
   #Lambda functions.
@@ -291,7 +292,7 @@ Resources:
       CodeUri: dynamodb-trigger-to-es/
       Handler: app.dynamodbTriggerToES
       Runtime: nodejs12.x
-      Role: !GetAtt MCQBasicReadWriteLambdaRole.Arn
+      Role: !GetAtt MCQDynamodbESTriggerLambdaRole.Arn
       Environment:
         Variables:
           BASE_TABLE_NAME: !Ref MCQBaseTable
@@ -345,8 +346,34 @@ Resources:
             Path: /test
             Method: post
 
-    
   #
+  #
+  #
+  #(01) ES Domain
+  MCQElasticsearchDomain:
+    Type: AWS::Elasticsearch::Domain
+    Properties:
+      DomainName:  !Sub "${BranchPrefix}-MCQElasticsearchDomain"
+      ElasticsearchVersion: 7.4
+      ElasticsearchClusterConfig:
+        InstanceCount: '1'
+        InstanceType: t2.small.elasticsearch
+        DedicatedMasterEnabled: false
+      AccessPolicies:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              AWS: 
+                - Fn::GetAtt: ["MCQIdentityPoolAuthRole", "Arn"]
+                - Fn::GetAtt: ["MCQBasicReadWriteLambdaRole", "Arn"]
+            Action: 'es:ESHttp*'
+            Resource: "*"
+      CognitoOptions:
+        Enabled: true
+        IdentityPoolId: !Ref MCQIdentityPool
+        RoleArn: !Ref CognitoAccessForElasticsearchRole
+        UserPoolId: !Ref MCQCognitoUserPool
   #
   #
   #
@@ -548,7 +575,7 @@ Resources:
                   - !Join [ '', [ !GetAtt MCQBaseTable.Arn, '/index/'] ]
                   - !Join [ '', [ !GetAtt MCQBaseTable.Arn, '/index/*'] ]
 
-  #(02)Authenticated Role for MCQIdentityPool.
+  #(02) Authenticated Role for MCQIdentityPool.
   MCQIdentityPoolAuthRole:
     Type: "AWS::IAM::Role"
     Properties:
@@ -564,7 +591,69 @@ Resources:
               cognito-identity.amazonaws.com:amr: authenticated
       Path: "/"
   
+  #(03) Role to grant access to MCQElasticsearchDomain via Cognito.
+  CognitoAccessForElasticsearchRole:
+    Type: "AWS::IAM::Role"
+    Properties:
+      RoleName: !Sub "${BranchPrefix}-CognitoAccessForElasticsearchRole"
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service: es.amazonaws.com
+          Action: sts:AssumeRole
+      Path: "/"
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/AmazonESCognitoAccess
+  
+  #(04) Role to grant access to ES Domain
+  MCQDynamodbESTriggerLambdaRole:
+    Type: "AWS::IAM::Role"
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: "Allow"
+            Principal:
+              Service:
+                - "lambda.amazonaws.com"
+            Action:
+              - "sts:AssumeRole"
+      Path: "/"
+      Policies:
+        #Policy 01
+        - PolicyName: "MCQDynamodbTriggerPolicy"
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: "Allow"
+                Action:
+                  - "dynamodb:BatchGetItem"
+                  - "dynamodb:BatchWriteItem"
+                  - "dynamodb:ConditionCheckItem"
+                  - "dynamodb:DeleteItem"
+                  - "dynamodb:DescribeTimeToLive"
+                  - "dynamodb:GetItem"
+                  - "dynamodb:PutItem"
+                  - "dynamodb:Query"
+                  - "dynamodb:Scan"
+                  - "dynamodb:UpdateItem"
+                  - "dynamodb:DescribeStream"
+                  - "dynamodb:GetRecords"
+                  - "dynamodb:GetShardIterator"
+                  - "dynamodb:ListStreams"
+                  
+                Resource: 
+                  
+                  - !GetAtt MCQBaseTable.Arn
+                  - !Join [ '', [ !GetAtt MCQBaseTable.Arn, '/*'] ]
 
+                  - !Join [ '', [ !GetAtt MCQBaseTable.Arn, '/index/'] ]
+                  - !Join [ '', [ !GetAtt MCQBaseTable.Arn, '/index/*'] ]
+
+                  - !Join [ '', [ !GetAtt MCQBaseTable.Arn, '/stream/'] ]
+                  - !Join [ '', [ !GetAtt MCQBaseTable.Arn, '/stream/*'] ]
   #
   #
   #
