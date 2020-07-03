@@ -18,7 +18,7 @@ let response;
 //Environment variables
 const { BASE_TABLE_NAME } = process.env;
 
-exports.addStudentToDatabase = (event, context, callback) => {
+exports.dynamodbTriggerToES = (event, context, callback) => {
     console.log(event);
     try {
         //Putting a new vehicle record to the Base table.    

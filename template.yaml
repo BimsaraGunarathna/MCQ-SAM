@@ -29,6 +29,7 @@ Resources:
       Environment:
         Variables:
           BASE_TABLE_NAME: !Ref MCQBaseTable
+          HISTORY_TABLE_NAME: !Ref MCQHistoryTable
       Events:
         MCQAPI:
           Type: Api 
@@ -48,6 +49,7 @@ Resources:
       Environment:
         Variables:
           BASE_TABLE_NAME: !Ref MCQBaseTable
+          HISTORY_TABLE_NAME: !Ref MCQHistoryTable
       Events:
         MCQAPI:
           Type: Api 
@@ -67,6 +69,7 @@ Resources:
       Environment:
         Variables:
           BASE_TABLE_NAME: !Ref MCQBaseTable
+          HISTORY_TABLE_NAME: !Ref MCQHistoryTable
       Events:
         MCQAPI:
           Type: Api 
@@ -86,6 +89,7 @@ Resources:
       Environment:
         Variables:
           BASE_TABLE_NAME: !Ref MCQBaseTable
+          HISTORY_TABLE_NAME: !Ref MCQHistoryTable
       Events:
         MCQAPI:
           Type: Api 
@@ -105,6 +109,7 @@ Resources:
       Environment:
         Variables:
           BASE_TABLE_NAME: !Ref MCQBaseTable
+          HISTORY_TABLE_NAME: !Ref MCQHistoryTable
       Events:
         MCQAPI:
           Type: Api 
@@ -124,6 +129,7 @@ Resources:
       Environment:
         Variables:
           BASE_TABLE_NAME: !Ref MCQBaseTable
+          HISTORY_TABLE_NAME: !Ref MCQHistoryTable
       Events:
         MCQAPI:
           Type: Api 
@@ -143,6 +149,7 @@ Resources:
       Environment:
         Variables:
           BASE_TABLE_NAME: !Ref MCQBaseTable
+          HISTORY_TABLE_NAME: !Ref MCQHistoryTable
       Events:
         MCQAPI:
           Type: Api 
@@ -162,6 +169,7 @@ Resources:
       Environment:
         Variables:
           BASE_TABLE_NAME: !Ref MCQBaseTable
+          HISTORY_TABLE_NAME: !Ref MCQHistoryTable
       Events:
         MCQAPI:
           Type: Api 
@@ -181,6 +189,7 @@ Resources:
       Environment:
         Variables:
           BASE_TABLE_NAME: !Ref MCQBaseTable
+          HISTORY_TABLE_NAME: !Ref MCQHistoryTable
       Events:
         MCQAPI:
           Type: Api 
@@ -206,6 +215,7 @@ Resources:
       Environment:
         Variables:
           BASE_TABLE_NAME: !Ref MCQBaseTable
+          HISTORY_TABLE_NAME: !Ref MCQHistoryTable
       Events:
         MCQAPI:
           Type: Api 
@@ -225,6 +235,7 @@ Resources:
       Environment:
         Variables:
           BASE_TABLE_NAME: !Ref MCQBaseTable
+          HISTORY_TABLE_NAME: !Ref MCQHistoryTable
       Events:
         MCQAPI:
           Type: Api 
@@ -234,7 +245,7 @@ Resources:
             Method: post
 
   #(12) edit paper collection.
-  PacthPaperCollection:
+  PatchPaperCollection:
     Type: AWS::Serverless::Function 
     Properties:
       CodeUri: patch-paper-collection/
@@ -244,6 +255,7 @@ Resources:
       Environment:
         Variables:
           BASE_TABLE_NAME: !Ref MCQBaseTable
+          HISTORY_TABLE_NAME: !Ref MCQHistoryTable
       Events:
         MCQAPI:
           Type: Api 
@@ -263,6 +275,7 @@ Resources:
       Environment:
         Variables:
           BASE_TABLE_NAME: !Ref MCQBaseTable
+          HISTORY_TABLE_NAME: !Ref MCQHistoryTable
       Events:
         MCQAPI:
           Type: Api 
@@ -271,45 +284,48 @@ Resources:
             Path: /collection
             Method: delete
 
-  #(14) Delete paper collection.
-  DeletePaperCollection:
+  #(14) Dynamodb trigger to add stuff to ES.
+  DynamodbTriggerToES:
     Type: AWS::Serverless::Function 
     Properties:
-      CodeUri: delete-paper-collection/
-      Handler: app.deletePaperCollection
+      CodeUri: dynamodb-trigger-to-es/
+      Handler: app.dynamodbTriggerToES
       Runtime: nodejs12.x
       Role: !GetAtt MCQBasicReadWriteLambdaRole.Arn
       Environment:
         Variables:
           BASE_TABLE_NAME: !Ref MCQBaseTable
+          HISTORY_TABLE_NAME: !Ref MCQHistoryTable
       Events:
-        MCQAPI:
-          Type: Api 
+        Stream:
+          Type: DynamoDB
           Properties:
-            RestApiId: !Ref MCQApiGatewayApi
-            Path: /collection
-            Method: delete
-  
-  #(15) Delete paper collection.
-  DeletePaperCollection:
-    Type: AWS::Serverless::Function 
-    Properties:
-      CodeUri: delete-paper-collection/
-      Handler: app.deletePaperCollection
-      Runtime: nodejs12.x
-      Role: !GetAtt MCQBasicReadWriteLambdaRole.Arn
-      Environment:
-        Variables:
-          BASE_TABLE_NAME: !Ref MCQBaseTable
-      Events:
-        MCQAPI:
-          Type: Api 
-          Properties:
-            RestApiId: !Ref MCQApiGatewayApi
-            Path: /collection
-            Method: delete
+            Stream: 
+              !GetAtt MCQBaseTable.StreamArn   # This must be the name of a DynamoDB table declared in the same template file
+            StartingPosition: LATEST
+            BatchSize: 10
+            Enabled: true
 
-  #(16) Test stuff out.
+  #(14) s3 trigger to add stuff to DynamoDB.
+  S3TriggerToDynamodb:
+    Type: AWS::Serverless::Function 
+    Properties:
+      CodeUri: s3-trigger-to-dynamodb/
+      Handler: app.s3TriggerToDynamodb
+      Runtime: nodejs12.x
+      Role: !GetAtt MCQBasicReadWriteLambdaRole.Arn
+      Environment:
+        Variables:
+          BASE_TABLE_NAME: !Ref MCQBaseTable
+          HISTORY_TABLE_NAME: !Ref MCQHistoryTable
+      Events:
+        CreateThumbnailEvent:
+          Type: S3
+          Properties:
+            Bucket: !Ref MCQImageBucket
+            Events: s3:ObjectCreated:*
+
+  #(15) Test stuff out.
   TestLambdaFunction:
     Type: AWS::Serverless::Function 
     Properties:
@@ -320,6 +336,7 @@ Resources:
       Environment:
         Variables:
           BASE_TABLE_NAME: !Ref MCQBaseTable
+          HISTORY_TABLE_NAME: !Ref MCQHistoryTable
       Events:
         MCQAPI:
           Type: Api 
@@ -688,6 +705,7 @@ Resources:
   #
   #
   #DynamoDB
+  #(01) Dynamodb Table to put stuff 
   MCQBaseTable:
     Type: AWS::DynamoDB::Table
     Properties:
@@ -705,3 +723,24 @@ Resources:
         ReadCapacityUnits: "5"
         WriteCapacityUnits: "5"
       TableName: !Sub "${BranchPrefix}-MCQBaseTable"
+      StreamSpecification: 
+        StreamViewType: "NEW_IMAGE"
+
+  #(02) Dynamodb Table to put stuff 
+  MCQHistoryTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      AttributeDefinitions:
+        - AttributeName: "PK"
+          AttributeType: "S"
+        - AttributeName: "SK"
+          AttributeType: "S"
+      KeySchema:
+        - AttributeName: "PK"
+          KeyType: "HASH"
+        - AttributeName: "SK"
+          KeyType: "RANGE"
+      ProvisionedThroughput:
+        ReadCapacityUnits: "5"
+        WriteCapacityUnits: "5"
+      TableName: !Sub "${BranchPrefix}-MCQHistoryTable"

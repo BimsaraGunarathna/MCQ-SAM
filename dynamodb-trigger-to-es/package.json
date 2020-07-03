@@ -1,5 +1,5 @@
 {
-  "name": "add_student_to_database",
+  "name": "dynamodb_trigger_to_es",
   "version": "1.0.0",
   "description": "Add student to the database.",
   "main": "app.js",
