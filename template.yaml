@@ -271,7 +271,45 @@ Resources:
             Path: /collection
             Method: delete
 
-  #(14) Test stuff out.
+  #(14) Delete paper collection.
+  DeletePaperCollection:
+    Type: AWS::Serverless::Function 
+    Properties:
+      CodeUri: delete-paper-collection/
+      Handler: app.deletePaperCollection
+      Runtime: nodejs12.x
+      Role: !GetAtt MCQBasicReadWriteLambdaRole.Arn
+      Environment:
+        Variables:
+          BASE_TABLE_NAME: !Ref MCQBaseTable
+      Events:
+        MCQAPI:
+          Type: Api 
+          Properties:
+            RestApiId: !Ref MCQApiGatewayApi
+            Path: /collection
+            Method: delete
+  
+  #(15) Delete paper collection.
+  DeletePaperCollection:
+    Type: AWS::Serverless::Function 
+    Properties:
+      CodeUri: delete-paper-collection/
+      Handler: app.deletePaperCollection
+      Runtime: nodejs12.x
+      Role: !GetAtt MCQBasicReadWriteLambdaRole.Arn
+      Environment:
+        Variables:
+          BASE_TABLE_NAME: !Ref MCQBaseTable
+      Events:
+        MCQAPI:
+          Type: Api 
+          Properties:
+            RestApiId: !Ref MCQApiGatewayApi
+            Path: /collection
+            Method: delete
+
+  #(16) Test stuff out.
   TestLambdaFunction:
     Type: AWS::Serverless::Function 
     Properties:
