@@ -353,12 +353,16 @@ Resources:
   MCQElasticsearchDomain:
     Type: AWS::Elasticsearch::Domain
     Properties:
-      DomainName:  !Sub "${BranchPrefix}-MCQElasticsearchDomain"
+      DomainName:  !Sub "${BranchPrefix}-mcq-es-domain"
       ElasticsearchVersion: 7.4
       ElasticsearchClusterConfig:
         InstanceCount: '1'
         InstanceType: t2.small.elasticsearch
         DedicatedMasterEnabled: false
+      EBSOptions:
+        EBSEnabled: true
+        VolumeSize: 10
+        VolumeType: gp2
       AccessPolicies:
         Version: 2012-10-17
         Statement:
@@ -372,7 +376,8 @@ Resources:
       CognitoOptions:
         Enabled: true
         IdentityPoolId: !Ref MCQIdentityPool
-        RoleArn: !Ref CognitoAccessForElasticsearchRole
+        RoleArn: 
+          Fn::GetAtt: ["MCQCognitoAccessForAmazonESRole", "Arn"]
         UserPoolId: !Ref MCQCognitoUserPool
   #
   #
@@ -544,13 +549,25 @@ Resources:
         Statement:
           - Effect: "Allow"
             Principal:
-              Service:
-                - "lambda.amazonaws.com"
+              Service: [
+                "lambda.amazonaws.com",
+                "es.amazonaws.com"
+              ]
             Action:
               - "sts:AssumeRole"
       Path: "/"
       Policies:
-        - PolicyName: "GoNowBasicReadWriteDynamodbPolicy"
+        - PolicyName: "MCQCognitoForESPolicy"
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: "Allow"
+                Action:
+                  - "mobileanalytics:PutEvents"
+                  - "cognito-sync:*"
+                  - "cognito-identity:*"
+                Resource: "*"
+        - PolicyName: "MCQBasicReadWriteDynamodbPolicy"
           PolicyDocument:
             Version: "2012-10-17"
             Statement:
@@ -592,10 +609,10 @@ Resources:
       Path: "/"
   
   #(03) Role to grant access to MCQElasticsearchDomain via Cognito.
-  CognitoAccessForElasticsearchRole:
+  MCQCognitoAccessForAmazonESRole:
     Type: "AWS::IAM::Role"
     Properties:
-      RoleName: !Sub "${BranchPrefix}-CognitoAccessForElasticsearchRole"
+      RoleName: !Sub "${BranchPrefix}-MCQCognitoAccessForAmazonESRole"
       AssumeRolePolicyDocument:
         Version: '2012-10-17'
         Statement:
@@ -735,13 +752,13 @@ Resources:
     Type: AWS::Cognito::UserPoolClient
     Properties:
       UserPoolId: !Ref MCQCognitoUserPool
-      ClientName: MCQCognitoUserPoolClient
+      ClientName: !Sub "${BranchPrefix}-MCQCognitoUserPoolClient"
       GenerateSecret: false
 
   MCQCognitoUserPoolDomain:
     Type: AWS::Cognito::UserPoolDomain
     Properties:
-      Domain: "gn-elasticsearch"
+      Domain: !Sub ${BranchPrefix}-mcq-es-domain
       UserPoolId: !Ref MCQCognitoUserPool
 
   #Identity Pool
