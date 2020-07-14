@@ -12,7 +12,7 @@ Globals:
 Parameters:
   BranchPrefix:
     Type: "String"
-    Default : "init"
+    Default : "mstr"
 
 Resources:
   #P
@@ -180,23 +180,25 @@ Resources:
             Method: post
   
   #(09) create student entry when first paper is done.
-  AddStudentToDatabase:
+  AddUserToDatabase:
     Type: AWS::Serverless::Function 
     Properties:
-      CodeUri: add-student-to-database/
-      Handler: app.addStudentToDatabase
+      CodeUri: add-user-to-database/
+      Handler: app.addUserToDatabase
       Runtime: nodejs12.x
       Role: !GetAtt MCQBasicReadWriteLambdaRole.Arn
       Environment:
         Variables:
           BASE_TABLE_NAME: !Ref MCQBaseTable
           HISTORY_TABLE_NAME: !Ref MCQHistoryTable
+          IDENTITY_POOL_ID: !Ref MCQIdentityPool
+          ACCOUNT_ID: !Ref MCQImageUser
       Events:
         MCQAPI:
           Type: Api 
           Properties:
             RestApiId: !Ref MCQApiGatewayApi
-            Path: /student
+            Path: /user
             Method: post
         CognitoTrigger:
           Type: Cognito
@@ -350,35 +352,36 @@ Resources:
   #
   #
   #(01) ES Domain
-  MCQElasticsearchDomain:
-    Type: AWS::Elasticsearch::Domain
-    Properties:
-      DomainName:  !Sub "${BranchPrefix}-mcq-es-domain"
-      ElasticsearchVersion: 7.4
-      ElasticsearchClusterConfig:
-        InstanceCount: '1'
-        InstanceType: t2.small.elasticsearch
-        DedicatedMasterEnabled: false
-      EBSOptions:
-        EBSEnabled: true
-        VolumeSize: 10
-        VolumeType: gp2
-      AccessPolicies:
-        Version: 2012-10-17
-        Statement:
-          - Effect: Allow
-            Principal:
-              AWS: 
-                - Fn::GetAtt: ["MCQIdentityPoolAuthRole", "Arn"]
-                - Fn::GetAtt: ["MCQBasicReadWriteLambdaRole", "Arn"]
-            Action: 'es:ESHttp*'
-            Resource: "*"
-      CognitoOptions:
-        Enabled: true
-        IdentityPoolId: !Ref MCQIdentityPool
-        RoleArn: 
-          Fn::GetAtt: ["MCQCognitoAccessForAmazonESRole", "Arn"]
-        UserPoolId: !Ref MCQCognitoUserPool
+  #MCQElasticsearchDomain:
+  #  Type: AWS::Elasticsearch::Domain
+  #  Properties:
+  #    DomainName:  !Sub "${BranchPrefix}-mcq-es-domain"
+  #    ElasticsearchVersion: 7.4
+  #    ElasticsearchClusterConfig:
+  #      InstanceCount: '1'
+  #      InstanceType: t2.small.elasticsearch
+  #      DedicatedMasterEnabled: false
+  #    EBSOptions:
+  #      EBSEnabled: true
+  #      VolumeSize: 10
+  #      VolumeType: gp2
+  #    AccessPolicies:
+  #      Version: 2012-10-17
+  #      Statement:
+  #        - Effect: Allow
+  #          Principal:
+  #            AWS: 
+  #              - Fn::GetAtt: ["MCQIdentityPoolAuthRole", "Arn"]
+  #              - Fn::GetAtt: ["MCQBasicReadWriteLambdaRole", "Arn"]
+  #          Action: 'es:ESHttp*'
+  #          Resource: "*"
+  #    CognitoOptions:
+  #      Enabled: true
+  #      IdentityPoolId: !Ref MCQIdentityPool
+  #      RoleArn: 
+  #        Fn::GetAtt: ["MCQCognitoAccessForAmazonESRole", "Arn"]
+  #      UserPoolId: !Ref MCQCognitoUserPool
+  
   #
   #
   #

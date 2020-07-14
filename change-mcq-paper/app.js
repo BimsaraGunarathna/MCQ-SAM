@@ -1,3 +1,4 @@
+
 const AWS = require('aws-sdk');
 const dynamodb = new AWS.DynamoDB({ region: 'ap-southeast-1', apiVersion: '2012-08-10'});
 
@@ -7,186 +8,144 @@ const ddbGeo = require('dynamodb-geo');
 //Environment variables
 const { BASE_TABLE_NAME, LOCATION_TABLE_NAME } = process.env;
 
-exports.changeMCQPaper = (event, context, callback) => {
+//
+PaperHostFacet = (
+    paperId, 
+    paperHostId,
+    paperName,
+    paperGrade,
+    paperFocussedExamination,
+    paperDescription,
+    paperNumOfQue,
+    paperTimeLimit,
+    paperSearchTag1,
+    paperSearchTag2,
+    paperSearchTag3,
+    paperSearchTag4,
+    paperSearchTag5,
+    subjectId,
+    paperMCQSet
+    ) => {
+    const PK = 'paperId_' + paperId;
+    const SK = 'paperHostId_' + paperHostId;
         
-    //geohash configuaration
-    const config = new ddbGeo.GeoDataManagerConfiguration(dynamodb, LOCATION_TABLE_NAME);
-    const myGeoTableManager = new ddbGeo.GeoDataManager(config);
-
-    //eventually consistent reads, at half the cost.
-    config.consistentRead = false;
-    //Use true([lon, lat]) for GeoJSON standard compliance. (default )
-    config.longitudeFirst = true;
-    //Dynamodb configuaration.
-    config.geohashAttributeName = "LSI_01";
-    config.hashKeyAttributeName = "PK";
-    // Pick a hashKeyLength appropriate to your usage
-    config.hashKeyLength = 6;
-    config.rangeKeyAttributeName = "SK";
-    config.geoJsonAttributeName = "geoJson";
-    config.geohashIndexName = "LSI_LOCA_01";
-
-
-    // Querying 100km from Cambridge, UK
-    myGeoTableManager.queryRadius({
-        RadiusInMeter: 100000,
-        CenterPoint: {
-            latitude: 51.51,
-            longitude: -0.13
-        }
-    })
-        // Print the results, an array of DynamoDB.AttributeMaps
-        .then(
-            (result) => {
-                console.log('RESULT');
-                console.log(result);
-                if (result.length == 0) {
-
-                    myGeoTableManager.putPoint({
-                        RangeKeyValue: { S: '1234' }, // Use this to ensure uniqueness of the hash/range pairs.
-                        GeoPoint: { // An object specifying latitutde and longitude as plain numbers. Used to build the geohash, the hashkey and geojson data
-                            latitude: 51.51,
-                            longitude: -0.13
-                        },
-                        PutItemInput: { // Passed through to the underlying DynamoDB.putItem request. TableName is filled in for you.
-                            Item: { // The primary key, geohash and geojson data is filled in for you
-                                country: { S: 'Old Empire' }, // Specify attribute values using { type: value } objects, like the DynamoDB API.
-                                capital: { S: 'London' }
-                            },
-                            // ... Anything else to pass through to `putItem`, eg ConditionExpression
-                        }
-                    })
-                        .promise()
-                        .then(
-                            console.log('Done! putting new point.')
-                        )
-                        .catch((err) => {
-                            console.log('Error happened! Bit of fucked up at putting new point.')
-                            console.log(err)
-                        });
-
-                } else {
-                    myGeoTableManager.updatePoint({
-                        RangeKeyValue: { S: '1234' },
-                        GeoPoint: { // An object specifying latitutde and longitude as plain numbers.
-                            latitude: 51.51,
-                            longitude: -0.13
-                        },
-                        UpdateItemInput: { // TableName and Key are filled in for you
-                            UpdateExpression: 'SET country = :newName',
-                            ExpressionAttributeValues: {
-                                ':newName': { S: 'God bless the Queen' }
-                            }
-                        }
-                    })
-                        .promise()
-                        .then(() => { console.log('Done! updatting exsiting point.') })
-                        .catch(() => { console.log('Error happened! updatting exsiting point.') });
-                }
-
-            }
-
-        )
-        .then( () => {
-            console.log('Done! query found matching Geo Hash.')
-        })
-        .catch(
-            (err) => {
-                console.log('Error happened! Geo Hash query failed.');
-                console.log(err);
-            }
-        );
-
-    //Putting a new vehicle record to the Base table.    
-    var newVehicleId = 'vehicleId_' + (Math.random());
-    const params = {
-        Item: {
-            "vehicleId": {
-                S: newVehicleId
+    var chageParams = {
+        ExpressionAttributeNames: {
+            "#PN": "paperName",
+            "#PG": "paperGrade",
+            "#PFE": "paperFocussedExamination",
+            "#PD": "paperDescription",
+            "#PNOQ": "paperNumOfQue",
+            "#PTL": "paperTimeLimit",
+            "#PST1": "paperSearchTag1",
+            "#PST2": "paperSearchTag2",
+            "#PST3": "paperSearchTag3",
+            "#PST4": "paperSearchTag4",
+            "#PST5": "paperSearchTag5",
+            "#SI": "subjectId",
+            "#PMCQS": "paperMCQSet"
+        },
+        ExpressionAttributeValues: {
+            ":pn": {
+                S: paperName
             },
-            "hostId": { 
-                S: event.hostId
+            ":pg": {
+                S: paperGrade
             },
-            "hostName": { 
-                S: event.hostName
+            ":pfe": {
+                S: paperFocussedExamination
             },
-            "hostPhoneNumber": { 
-                S: event.hostPhoneNumber
+            ":pd": {
+                S: paperDescription
             },
-            "vehicleName": { 
-                S: event.vehicleName
+            ":pnoq": {
+                S: paperNumOfQue
             },
-            "vehicleType": { 
-                S: event.vehicleType
+            ":ptl": {
+                S: paperTimeLimit
             },
-            "vehicleNumOfSeats": { 
-                S: event.vehicleNumOfSeats
+            ":pst1": {
+                S: paperSearchTag1
             },
-            "vehicleKmPerL": { 
-                N: event.vehicleKmPerL
+            ":pst2": {
+                S: paperSearchTag2
             },
-            "vehicleDayPrice": { 
-                N: event.vehicleDayPrice
+            ":pst3": {
+                S: paperSearchTag3
             },
-            "vehiclePickupLocation": { 
-                S: event.vehiclePickupLocation
+            ":pst4": {
+                S: paperSearchTag4
             },
-            "vehicleReturnLocation": {
-                S: event.vehicleReturnLocation
+            ":pst5": {
+                S: paperSearchTag5
             },
-            "vehicleAvaliableStartDate": {
-                S: event.vehicleAvaliableStartDate
+            ":si": {
+                S: subjectId
             },
-            "vehicleAvaliableEndDate": {
-                S: event.vehicleAvaliableEndDate
+            ":pmcqs": {
+                S: paperMCQSet
             },
-            "vehicleDescription": {
-                S: event.vehicleDescription
+        },
+        Key: {
+            "PK": {
+                S: PK
             },
-            "vehicleRegNumber": {
-                S: event.vehicleRegNumber
-            },
-            "isVehicleFavourite": {
-                BOOL: event.isVehicleFavourite
-            },
-            "vehicleTag1": {
-                S: event.vehicleTag1
-            },
-            "vehicleTag2": {
-                S: event.vehicleTag2
-            },
-            "vehicleTag3": {
-                S: event.vehicleTag3
-            },
-            "vehicleProfileImageUrl": {
-                S: event.vehicleProfileImageUrl
-            },
-            "vehicleImageUrl1": {
-                S: event.vehicleImageUrl1
-            },
-            "vehicleImageUrl2": {
-                S: event.vehicleImageUrl2
-            },
-            "vehicleImageUrl3": {
-                S: event.vehicleImageUrl3
-            },
-            "vehicleAvailability": {
-                BOOL: event.vehicleAvailability
-            },
-            "vehicleTripId": {
-                S: event.vehicleTripId
+            "SK": {
+                S: SK
             }
         },
-        TableName: BASE_TABLE_NAME
+        ReturnValues: "ALL_NEW",
+        TableName: BASE_TABLE_NAME,
+        UpdateExpression: "SET #PN = :pn, #PG = :pg, #PFE = :pee, #PD = :pd, #PNOQ = :pnoq, #PTL = :ptl, #PST1 = :pst1, #PST2 = :pst2, #PST3 = :pst3, #PST4 = :pst4, #PST5 = :pst5, #SI = :si, #PMCQS = :pmcqs"
     };
-    dynamodb.putItem(params, function(err, data) {
-        if (err) {
-            console.log(err);
-            callback(err);
-        } else {
-            console.log(data);
-            callback(null, newVehicleId);
+
+    dynamodb.updateItem(chageParams, function (err, data) {
+        if (err) console.log(err, err.stack); // an error occurred
+        else console.log(data);           // successful response
+        /*
+        data = {
+         Attributes: {
+          "AlbumTitle": {
+            S: "Louder Than Ever"
+           }, 
+          "Artist": {
+            S: "Acme Band"
+           }, 
+          "SongTitle": {
+            S: "Happy Day"
+           }, 
+          "Year": {
+            N: "2015"
+           }
+         }
         }
+        */
     });
+}
+
+
+exports.changeMCQPaper = (event, context, callback) => {
     
+    //
+    PaperHostFacet(
+        event.paperId, 
+        event.paperHostId,
+
+        event.paperName,
+        event.paperGrade,
+        event.paperFocussedExamination,
+        event.paperDescription,
+        event.paperNumOfQue,
+        event.paperTimeLimit,
+        event.paperSearchTag1,
+        event.paperSearchTag2,
+        event.paperSearchTag3,
+        event.paperSearchTag4,
+        event.paperSearchTag5,
+        event.subjectId,
+        event.paperMCQSet
+    );
+
+    //
+
 };

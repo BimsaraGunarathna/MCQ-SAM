@@ -1,7 +1,7 @@
 {
-  "name": "add_student_to_database",
+  "name": "add_user_to_database",
   "version": "1.0.0",
-  "description": "Add student to the database.",
+  "description": "Add user to the database.",
   "main": "app.js",
   "repository": "https://github.com/awslabs/aws-sam-cli/tree/develop/samcli/local/init/templates/cookiecutter-aws-sam-hello-nodejs",
   "author": "SAM CLI",
