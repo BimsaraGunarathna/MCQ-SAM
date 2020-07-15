@@ -14,20 +14,38 @@ let response;
  * @returns {Object} object - API Gateway Lambda Proxy Output Format
  * 
  */
-exports.deletePaperCollection = async (event, context) => {
-    try {
-        // const ret = await axios(url);
-        response = {
-            'statusCode': 200,
-            'body': JSON.stringify({
-                message: 'hello world',
-                // location: ret.data.trim()
-            })
-        }
-    } catch (err) {
-        console.log(err);
-        return err;
-    }
 
-    return response
+//Environment variables
+const { BASE_TABLE_NAME, HISTORY_TABLE_NAME } = process.env;
+
+exports.deletePaperCollection = (event, context) => {
+
+    PK = event.paperId;
+    SK = event.paperHostId;
+    //get the paper item.
+    //add the paper item to HISTORY_TABLE_NAME.
+    //delete the paper item.
+    var params = {
+        Key: {
+            "PK": {
+                S: "paperId_" + PK
+            },
+            "SK": {
+                S: "paperHostId_" + SK
+            }
+        },
+        TableName: BASE_TABLE_NAME
+    };
+    dynamodb.deleteItem(params, function (err, data) {
+        if (err) console.log(err, err.stack); // an error occurred
+        else console.log(data);           // successful response
+        /*
+        data = {
+         ConsumedCapacity: {
+          CapacityUnits: 1, 
+          TableName: "Music"
+         }
+        }
+        */
+    });
 };

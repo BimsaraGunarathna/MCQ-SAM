@@ -12,13 +12,12 @@ const { BASE_TABLE_NAME } = process.env;
 PaperHostFacet = (event, createdAt) => {
     //PK
     var paperId = uuidv1();
-    var PK = 'paperId_' + paperId;
 
     //facet 01:
     const paperId_paperHostId_facet = {
         Item: {
             "PK": {
-                S: PK
+                S: 'paperId_' + paperId
             },
             "SK": {
                 S: 'paperHostId_' + event.paperHostId

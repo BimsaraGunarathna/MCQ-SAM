@@ -84,7 +84,7 @@ PaperHostFacet = (
             },
             ":pmcqs": {
                 S: paperMCQSet
-            },
+            }
         },
         Key: {
             "PK": {
@@ -102,24 +102,6 @@ PaperHostFacet = (
     dynamodb.updateItem(chageParams, function (err, data) {
         if (err) console.log(err, err.stack); // an error occurred
         else console.log(data);           // successful response
-        /*
-        data = {
-         Attributes: {
-          "AlbumTitle": {
-            S: "Louder Than Ever"
-           }, 
-          "Artist": {
-            S: "Acme Band"
-           }, 
-          "SongTitle": {
-            S: "Happy Day"
-           }, 
-          "Year": {
-            N: "2015"
-           }
-         }
-        }
-        */
     });
 }
 
@@ -130,7 +112,6 @@ exports.changeMCQPaper = (event, context, callback) => {
     PaperHostFacet(
         event.paperId, 
         event.paperHostId,
-
         event.paperName,
         event.paperGrade,
         event.paperFocussedExamination,
