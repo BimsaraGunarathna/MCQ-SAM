@@ -14,20 +14,40 @@ let response;
  * @returns {Object} object - API Gateway Lambda Proxy Output Format
  * 
  */
-exports.getMCQPaperList = async (event, context) => {
-    try {
-        // const ret = await axios(url);
-        response = {
-            'statusCode': 200,
-            'body': JSON.stringify({
-                message: 'hello world',
-                // location: ret.data.trim()
-            })
-        }
-    } catch (err) {
-        console.log(err);
-        return err;
-    }
 
-    return response
+//Environment variables
+const { BASE_TABLE_NAME, HISTORY_TABLE_NAME } = process.env;
+
+exports.getMCQPaperList = async (event, context) => {
+
+    const type = event.type;
+    var params = {};
+
+    params = {
+        TableName: BASE_TABLE_NAME,
+        IndexName: "hostId-vehicleId-index",
+        KeyConditionExpression: "#yr = :yyyy",
+        Limit: 3,
+        ExpressionAttributeNames: {
+            "#yr": "hostId"
+        },
+        ExpressionAttributeValues: {
+            ":yyyy": "host"
+        },
+        ExclusiveStartKey: {
+            "hostId": "host",
+            "vehicleId": "vehicleId_0.6422279546072991"
+        }
+    };
+
+    docClient.query(params, function (err, data) {
+        if (err) {
+            console.error("Unable to query. Error:", JSON.stringify(err, null, 2));
+            callback(null, "Something wrong happened.");
+        } else {
+            console.log("Query succeeded.");
+            callback(null, data);
+        }
+    });
+
 };

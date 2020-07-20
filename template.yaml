@@ -15,7 +15,7 @@ Parameters:
     Default : "mstr"
 
 Resources:
-  #P
+  #
   #
   #
   #Lambda functions.
@@ -191,8 +191,6 @@ Resources:
         Variables:
           BASE_TABLE_NAME: !Ref MCQBaseTable
           HISTORY_TABLE_NAME: !Ref MCQHistoryTable
-          IDENTITY_POOL_ID: !Ref MCQIdentityPool
-          ACCOUNT_ID: !Ref MCQImageUser
       Events:
         MCQAPI:
           Type: Api 
@@ -823,6 +821,10 @@ Resources:
           AttributeType: "S"
         - AttributeName: "SK"
           AttributeType: "S"
+        - AttributeName: "paperId"
+          AttributeType: "S"
+        - AttributeName: "createdAt"
+          AttributeType: "S"
       KeySchema:
         - AttributeName: "PK"
           KeyType: "HASH"
@@ -832,6 +834,18 @@ Resources:
         ReadCapacityUnits: "5"
         WriteCapacityUnits: "5"
       TableName: !Sub "${BranchPrefix}-MCQBaseTable"
+      GlobalSecondaryIndexes:
+      - IndexName: "GSI_01"
+        KeySchema:
+          - AttributeName: "paperId"
+            KeyType: "HASH"
+          - AttributeName: "createdAt"
+            KeyType: "RANGE"
+        Projection:
+          ProjectionType: "KEYS_ONLY"
+        ProvisionedThroughput:
+          ReadCapacityUnits: '5'
+          WriteCapacityUnits: '5'
       StreamSpecification: 
         StreamViewType: "NEW_IMAGE"
 
